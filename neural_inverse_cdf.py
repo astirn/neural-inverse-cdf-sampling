@@ -9,57 +9,6 @@ from matplotlib.ticker import FormatStrFormatter
 from neural_inverse_cdf_utils import InvertibleNeuralNetworkLayer, train
 
 
-class LinearTest(object):
-
-    def __init__(self):
-
-        # define training range: [0, max]
-        self.z_max = 1
-        self.theta_max = 5
-
-        # save directory
-        self.save_dir = None
-
-    def sample_training_points(self, thetas_per_batch, samples_per_theta):
-
-        # sample thetas
-        thetas = np.random.random(thetas_per_batch) * self.theta_max
-
-        z = []
-        u = []
-        theta = []
-        for i in range(len(thetas)):
-
-            # sample z
-            z.append(np.random.random(samples_per_theta) * self.z_max)
-
-            # compute target u
-            u.append(z[-1] * thetas[i])
-
-            # up-sample theta
-            theta.append(thetas[i] * np.ones(samples_per_theta))
-
-        # convert to arrays
-        z = np.concatenate(z)
-        u = np.concatenate(u)
-        theta = np.concatenate(theta)
-
-        return z, u, theta
-
-    def sample_test_points(self, theta_quantile, num_points=100):
-
-        # compute target theta quantile
-        theta = theta_quantile * self.theta_max * np.ones(num_points)
-
-        # compute evaluation points
-        z = np.linspace(0, self.z_max, num_points)
-
-        # compute target
-        u = theta * z
-
-        return z, u, theta
-
-
 class GammaCDF(object):
 
     def __init__(self, theta_max=15):
