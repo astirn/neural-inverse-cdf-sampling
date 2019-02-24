@@ -1,11 +1,6 @@
-import os
+import numpy as np
+import tensorflow as tf
 from matplotlib import pyplot as plt
-
-# import model library file -- contains common architectural pieces and probabilistic evaluations
-from model_lib import *
-
-# import model utilities -- contains helper functions and performance tracking
-from model_utils import get_batches, train
 
 # import neural reparameterization functions
 from neural_inverse_cdf import NeuralInverseCDF, GammaCDF
