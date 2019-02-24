@@ -6,6 +6,9 @@ from matplotlib import pyplot as plt
 from neural_inverse_cdf import NeuralInverseCDF, GammaCDF
 from neural_inverse_cdf_utils import train
 
+# import utility functions
+from model_lib import kl_dirichlet
+
 
 # set seed
 tf.set_random_seed(0)
