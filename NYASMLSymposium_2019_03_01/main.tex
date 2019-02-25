@@ -1,4 +1,4 @@
-\documentclass[landscape,paperwidth=40in,paperheight=30in, margin=1in]{baposter}
+\documentclass[landscape,paperwidth=40in,paperheight=30in,margin=1in]{baposter}
 
 \usepackage{calc}
 \usepackage{graphicx}
@@ -119,7 +119,7 @@
 %  textfont=\sc, An example of changing the text font
   headershape=roundedright,
   headershade=shadelr,
-  headerfont=\Large\bf\textsc, %Sans Serif
+  headerfont=\large\bf\textsc, %Sans Serif
   textfont={\setlength{\parindent}{1.5em}},
   boxshade=plain,
 %  background=shade-tb,
@@ -172,18 +172,15 @@
   }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Inverse CDF}{name=inv_cdf,column=0,below=contribution}{
+  \headerbox{Invertible Neural Network}{name=inn,column=0,below=contribution}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    TS applies Bayesian inference in a sequential manner. As data is collected, the posterior transitions from a high entropy (explorative) prior to a more peaked (exploitative) distribution. To apply TS to a Bandit model, one needs:
+	Affine coupling layer \cite{ref:inn}
+	\begin{center}	
+	\includegraphics[width=\columnwidth]{images/inn_forward.png}
+	\\
+	\includegraphics[width=\columnwidth]{images/inn_backward.png}
+	\end{center}
   }
-  
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Invertible INN}{name=inn,column=0,below=inv_cdf}{
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    TS applies Bayesian inference in a sequential manner. As data is collected, the posterior transitions from a high entropy (explorative) prior to a more peaked (exploitative) distribution. To apply TS to a Bandit model, one needs:
-  }
-  
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \headerbox{CDF Approximation for Gamma Distribution}{name=gamma_results,column=1, span=2}{
@@ -193,11 +190,6 @@
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Simulated Environments}{name=environment,column=1,above=bottom}{
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    BLAH
-  }
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{Reparameterize }{name=algorithms,column=3,row=0}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\centering
@@ -205,7 +197,7 @@
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{Results}{name=results,column=3,below=algorithms}{
+\headerbox{Results}{name=lda,column=3,below=algorithms}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \begin{tabular}{ccccccccccc}
     \toprule
@@ -213,29 +205,22 @@
 	\cmidrule(r){2-5}
     				& Softmax		& NGS\\
     \midrule
-    NVLDA		& 8.95			& 7.04\\
+    NVLDA		& ???			& ???\\
     \midrule
-    ProDLDA		& 9.55			& 6.90\\
+    ProDLDA		& ???			& ???\\
     \midrule
   \end{tabular}
   }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{References \& Code}{name=references,column=3,below=results}{
+  \headerbox{References \& Code}{name=references,column=3,span=1,below=lda}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \smaller
-    \bibliographystyle{plain}
     \renewcommand{\section}[2]{\vskip 0.05em}
-    \begin{thebibliography}{1}\itemsep=-0.01em
-    \setlength{\baselineskip}{0.4em}
-    \bibitem{amberg11:graphtrack}
-    Thompson, W. R.
-    \newblock On the likelihood that one unknown probability exceeds another in view of the evidence of two samples.
-    \newblock In {\em Biometrika 1933}.
-    \end{thebibliography}
-    \vspace{0.3em}
+    \bibliographystyle{plain}
+    {\tiny \bibliography{references}}
     Source code available at:\\
-    \url{github.com/astirn/ExpandedThompsonSampling/}
+    \url{github.com/astirn/neural-inverse-cdf-sampling}
   }
   
 
