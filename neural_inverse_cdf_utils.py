@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 
 def inn_network_parameters(theta, out_dim, n_layers, name, trainable=True):
@@ -229,7 +230,7 @@ class InvertibleNeuralNetworkLayer(object):
         return u
 
 
-def train(mdl, sess, plot_dir=None):
+def train(mdl, sess, show_plots=False):
 
     # get losses
     loss_op, u_loss_op, z_loss_op = mdl.loss()
@@ -251,9 +252,12 @@ def train(mdl, sess, plot_dir=None):
     sess.run(tf.global_variables_initializer())
 
     # figure init
-    fig_loss, ax_loss = plt.subplots(1, 1)
-    if plot_dir is not None:
+    if show_plots:
+        _, ax_loss = plt.subplots(1, 1)
         plt.ion()
+    else:
+        ax_loss = None
+    fig_results = ax_results = None
 
     # loop over the epochs
     t = 0
@@ -281,21 +285,24 @@ def train(mdl, sess, plot_dir=None):
               'u Loss = {:.5f} | '.format(u_loss[t]) +
               'z Loss = {:.5f}'.format(z_loss[t]), end='')
 
-        # update learning curve
-        ax_loss.cla()
-        ax_loss.set_title('Learning Curve')
-        ax_loss.plot(loss[:t + 1])
-        ax_loss.set_xlabel('Epoch')
-        ax_loss.set_ylabel('Loss')
+        # plotting?
+        if ax_loss is not None:
 
-        # plot update
-        if np.mod(t + 1, 50) == 0:
+            # update learning curve
+            ax_loss.cla()
+            ax_loss.set_title('Learning Curve')
+            ax_loss.plot(loss[:t + 1])
+            ax_loss.set_xlabel('Epoch')
+            ax_loss.set_ylabel('Loss')
 
-            # update results plot
-            mdl.result_plot(sess)
+            # plot update
+            if np.mod(t + 1, 50) == 0:
 
-        # draw the plot
-        plt.pause(0.01)
+                # update results plot
+                fig_results, ax_results = result_plot(mdl, sess, fig_results, ax_results)
+
+            # draw the plot
+            plt.pause(0.01)
 
         # increment t
         t += 1
@@ -303,6 +310,50 @@ def train(mdl, sess, plot_dir=None):
     # save the model if it has a specified save directory
     if mdl.target.mdl_dir is not None:
         tf_saver.save(sess, mdl.target.mdl_dir)
+
+
+def result_plot(mdl, sess, fig_results=None, ax_results=None):
+
+    # configure plotting
+    if fig_results is None or ax_results is None:
+        fig_results, ax_results = plt.subplots(2, 4, figsize=(16, 9))
+    ax_results = np.reshape(ax_results, -1)
+
+    # number of plots
+    num_plots = len(ax_results)
+
+    # set theta test points
+    thetas = [0.1, 0.5]
+
+    # result plots
+    thetas = thetas + list(np.linspace(1, mdl.target.theta_max, num_plots - len(thetas)))
+
+    for i in range(num_plots):
+
+        # get test points
+        z, u, theta = mdl.target.sample_test_points(thetas[i])
+
+        # load feed dictionary for testing
+        feed_dict = mdl._load_feed_dict(z, u, theta)
+        u_hat, z_hat = sess.run([mdl.u_hat, mdl.z_hat], feed_dict=feed_dict)
+
+        # take the mean since we pad: [u, u] and [z, z]
+        u_hat = np.mean(u_hat, axis=1)
+        z_hat = np.mean(z_hat, axis=1)
+
+        # add subplot
+        sp = ax_results[i]
+        sp.cla()
+        sp.set_title('$\\theta$ = {:.2f}'.format(theta[0]))
+        sp.plot(z, u, label='$F(z;\\theta)$', linewidth=2)
+        sp.plot(z_hat, u_hat, label='$F\'(z;\\theta)$', linewidth=2)
+        if np.mod(i, int(num_plots / 2)) == 0:
+            sp.set_ylabel('CDF')
+        sp.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        sp.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        sp.legend()
+
+    return fig_results, ax_results
 
 
 if __name__ == '__main__':

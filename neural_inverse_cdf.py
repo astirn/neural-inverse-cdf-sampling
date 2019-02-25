@@ -4,9 +4,8 @@ import numpy as np
 import tensorflow as tf
 from scipy.stats import gamma
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
 
-from neural_inverse_cdf_utils import InvertibleNeuralNetworkLayer, train
+from neural_inverse_cdf_utils import InvertibleNeuralNetworkLayer, train, result_plot
 
 
 class GammaCDF(object):
@@ -120,10 +119,6 @@ class NeuralInverseCDF(object):
         self.num_epochs = 1000
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
-        # configure plotting
-        self.fig_results, self.ax_results = plt.subplots(2, 4, figsize=(16, 9))
-        self.ax_results = np.reshape(self.ax_results, -1)
-
     def _forward_eval(self, x, theta):
 
         # run the forward direction
@@ -195,42 +190,6 @@ class NeuralInverseCDF(object):
 
         return self._load_feed_dict(z, u, theta)
 
-    def result_plot(self, sess):
-
-        # number of plots
-        num_plots = len(self.ax_results)
-
-        # set theta test points
-        thetas = [0.1, 0.5]
-
-        # result plots
-        thetas = thetas + list(np.linspace(1, self.target.theta_max, num_plots - len(thetas)))
-
-        for i in range(num_plots):
-
-            # get test points
-            z, u, theta = self.target.sample_test_points(thetas[i])
-
-            # load feed dictionary for testing
-            feed_dict = self._load_feed_dict(z, u, theta)
-            u_hat, z_hat = sess.run([self.u_hat, self.z_hat], feed_dict=feed_dict)
-
-            # take the mean since we pad: [u, u] and [z, z]
-            u_hat = np.mean(u_hat, axis=1)
-            z_hat = np.mean(z_hat, axis=1)
-
-            # add subplot
-            sp = self.ax_results[i]
-            sp.cla()
-            sp.set_title('$\\theta$ = {:.2f}'.format(theta[0]))
-            sp.plot(z, u, label='$F(z;\\theta)$', linewidth=2)
-            sp.plot(z_hat, u_hat, label='$F\'(z;\\theta)$', linewidth=2)
-            if np.mod(i, int(num_plots / 2)) == 0:
-                sp.set_ylabel('CDF')
-            sp.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            sp.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            sp.legend()
-
     def sample_operation(self, u, theta):
 
         # expand dimensions if needed
@@ -273,6 +232,9 @@ class NeuralInverseCDF(object):
 
 if __name__ == '__main__':
 
+    # set seed
+    tf.set_random_seed(123)
+
     # set training parameters
     inn_layers = 8
     theta_max = 15
@@ -285,7 +247,7 @@ if __name__ == '__main__':
         mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max), inn_layers=inn_layers)
 
         # train the model
-        train(mdl, sess)
+        train(mdl, sess, show_plots=True)
 
     # test loading
     tf.reset_default_graph()
@@ -300,7 +262,7 @@ if __name__ == '__main__':
         mdl.restore(sess)
 
         # test it
-        mdl.result_plot(sess)
+        fig_results, _ = result_plot(mdl, sess)
 
     # keep plots open
     plt.ioff()
