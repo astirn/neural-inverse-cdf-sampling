@@ -10,19 +10,19 @@ from neural_inverse_cdf_utils import InvertibleNeuralNetworkLayer, train, result
 
 class GammaCDF(object):
 
-    def __init__(self, theta_max=15):
+    def __init__(self, theta_max=15, base_dir=os.getcwd()):
 
         # define theta range
         self.theta_min = 0
         self.theta_max = theta_max
 
         # log directory
-        self.log_dir = os.path.join(os.getcwd(), 'InverseCDF', 'Gamma', 'logdir')
+        self.log_dir = os.path.join(base_dir, 'InverseCDF', 'Gamma', 'logdir')
         if os.path.exists(self.log_dir):
             shutil.rmtree(self.log_dir)
 
         # checkpoint directory
-        self.mdl_dir = os.path.join(os.getcwd(), 'InverseCDF', 'Gamma', 'checkpoint', 'gamma')
+        self.mdl_dir = os.path.join(base_dir, 'InverseCDF', 'Gamma', 'checkpoint', 'gamma')
         if os.path.exists(self.mdl_dir):
             shutil.rmtree(self.mdl_dir)
 

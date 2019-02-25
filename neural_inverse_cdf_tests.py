@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
@@ -14,7 +15,7 @@ np.random.seed(123)
 tf.set_random_seed(123)
 
 
-def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials):
+def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials, base_dir=os.getcwd()):
 
     # get useful numbers
     K = x.shape[0]
@@ -22,16 +23,6 @@ def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials):
     # compute optimal posterior parameters
     alpha_star = alpha_prior + x
     print('alpha max = {:.2f}'.format(np.max(alpha_star)))
-
-    # establish training session
-    tf.reset_default_graph()
-    with tf.Session() as sess:
-
-        # declare model
-        mdl = NeuralInverseCDF(target=GammaCDF(theta_max=np.max(alpha_star)), inn_layers=inn_layers)
-
-        # train the model
-        train(mdl, sess)
 
     # initialize gradients
     gradients = np.zeros([len(alphas), N_trials, K])
@@ -47,7 +38,7 @@ def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials):
         epsilon_ph = tf.placeholder(tf.float32, [1, K])
 
         # declare Gamma sampler
-        sampler = NeuralInverseCDF(target=GammaCDF(), inn_layers=inn_layers, trainable=False)
+        sampler = NeuralInverseCDF(target=GammaCDF(base_dir=base_dir), inn_layers=inn_layers, trainable=False)
 
         # clamp alpha to supported value
         alpha_ph = tf.minimum(alpha_ph, sampler.target.theta_max)
