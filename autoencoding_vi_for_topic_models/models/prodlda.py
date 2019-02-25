@@ -7,6 +7,8 @@ from copy import deepcopy
 from time import time
 import matplotlib.pyplot as plt
 import pickle
+from neural_inverse_cdf import NeuralInverseCDF, GammaCDF
+from model_lib import kl_dirichlet
 def xavier_init(fan_in, fan_out, constant=1):
     low = -constant*np.sqrt(6.0/(fan_in + fan_out))
     high = constant*np.sqrt(6.0/(fan_in + fan_out))
@@ -15,6 +17,8 @@ def xavier_init(fan_in, fan_out, constant=1):
                              dtype=tf.float32)
 def log_dir_init(fan_in, fan_out,topics=50):
     return tf.log((1.0/topics)*tf.ones([fan_in, fan_out]))
+
+USE_NGS = True
 
 tf.reset_default_graph()
 class VAE(object):
@@ -29,14 +33,15 @@ class VAE(object):
         self.transfer_fct = transfer_fct
         self.learning_rate = learning_rate
         self.batch_size = batch_size
-        print 'Learning Rate:', self.learning_rate
+        print('Learning Rate:', self.learning_rate)
 
         # tf Graph input
         self.x = tf.placeholder(tf.float32, [None, network_architecture["n_input"]])
+        self.eps = tf.placeholder(tf.float32, [None, network_architecture["n_z"]])
         self.keep_prob = tf.placeholder(tf.float32)
 
         self.h_dim = float(network_architecture["n_z"])
-        self.a = 1*np.ones((1 , self.h_dim)).astype(np.float32)
+        self.a = 1*np.ones((1 , int(self.h_dim))).astype(np.float32)
         self.mu2 = tf.constant((np.log(self.a).T-np.mean(np.log(self.a),1)).T)
         self.var2 = tf.constant(  ( ( (1.0/self.a)*( 1 - (2.0/self.h_dim) ) ).T +
                                 ( 1.0/(self.h_dim*self.h_dim) )*np.sum(1.0/self.a,1) ).T  )
@@ -48,6 +53,8 @@ class VAE(object):
 
         self.sess = tf.InteractiveSession()
         self.sess.run(init)
+        if USE_NGS:
+            self.sampler.restore(self.sess, self.sampler_vars)
 
     def _create_network(self):
         self.network_weights = self._initialize_weights(**self.network_architecture)
@@ -58,14 +65,42 @@ class VAE(object):
         n_z = self.network_architecture["n_z"]
         eps = tf.random_normal((self.batch_size, n_z), 0, 1,
                                dtype=tf.float32)
-        self.z = tf.add(self.z_mean,
-                        tf.mul(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
-        self.sigma = tf.exp(self.z_log_sigma_sq)
+        if USE_NGS:
+            # declare Gamma sampler
+            self.sampler = NeuralInverseCDF(target=GammaCDF(), trainable=False)
+            self.sampler.target.mdl_dir = os.path.join(os.getcwd(), '..', 'InverseCDF', 'Gamma', 'checkpoint', 'gamma')
+
+            # clamp alpha to supported value
+            self.z_mean = tf.minimum(self.z_mean, self.sampler.target.theta_max)
+            self.z_mean = tf.maximum(self.z_mean, self.sampler.target.theta_min)
+
+            # route each alpha dimension through a shared neural gamma sampler
+            num_vars = len(tf.global_variables())
+            self.z = []
+            for i in range(self.z_mean.shape.as_list()[1]):
+                self.z.append(self.sampler.sample_operation(self.eps[:, i], self.z_mean[:, i]))
+
+                # ensure tensorFlow variables are being shared across alpha dimensions
+                if i == 0:
+                    test_vars = len(tf.global_variables())
+                else:
+                    assert test_vars == len(tf.global_variables())
+
+            # save the list of gamma sampler variables that will need to be loaded as constants
+            self.sampler_vars = tf.global_variables()[num_vars:]
+
+            # normalize Gamma samples so they form a Dirichlet sample
+            self.z = tf.stack(self.z, axis=-1)
+            self.z = self.z / tf.reduce_sum(self.z, axis=-1, keepdims=True)
+        else:
+            self.z = tf.add(self.z_mean,
+                            tf.multiply(tf.sqrt(tf.exp(self.z_log_sigma_sq)), eps))
+            self.sigma = tf.exp(self.z_log_sigma_sq)
 
         self.x_reconstr_mean = \
             self._generator_network(self.z,self.network_weights["weights_gener"])
 
-        print self.x_reconstr_mean
+        print(self.x_reconstr_mean)
 
     def _initialize_weights(self, n_hidden_recog_1, n_hidden_recog_2,
                             n_hidden_gener_1,
@@ -96,10 +131,13 @@ class VAE(object):
 
         z_mean = tf.contrib.layers.batch_norm(tf.add(tf.matmul(layer_do, weights['out_mean']),
                         biases['out_mean']))
-        z_log_sigma_sq = \
-            tf.contrib.layers.batch_norm(tf.add(tf.matmul(layer_do, weights['out_log_sigma']),
-                   biases['out_log_sigma']))
-
+        if USE_NGS:
+            z_mean = tf.nn.elu(z_mean) + 1 + 1e-3
+            z_log_sigma_sq = None
+        else:
+            z_log_sigma_sq = \
+                tf.contrib.layers.batch_norm(tf.add(tf.matmul(layer_do, weights['out_log_sigma']),
+                       biases['out_log_sigma']))
 
         return (z_mean, z_log_sigma_sq)
 
@@ -117,10 +155,15 @@ class VAE(object):
         reconstr_loss = \
             -tf.reduce_sum(self.x * tf.log(self.x_reconstr_mean),1)#/tf.reduce_sum(self.x,1)
 
-        latent_loss = 0.5*( tf.reduce_sum(tf.div(self.sigma,self.var2),1)+\
-        tf.reduce_sum( tf.mul(tf.div((self.mu2 - self.z_mean),self.var2),
-                  (self.mu2 - self.z_mean)),1) - self.h_dim +\
-                           tf.reduce_sum(tf.log(self.var2),1)  - tf.reduce_sum(self.z_log_sigma_sq  ,1) )
+        if USE_NGS:
+            # initialize KL Loss w/ Gaussian KL
+            K = self.network_architecture["n_z"]
+            latent_loss = kl_dirichlet(self.z_mean, tf.constant(np.ones(K) / K, dtype=tf.float32))
+        else:
+            latent_loss = 0.5*( tf.reduce_sum(tf.div(self.sigma,self.var2),1)+\
+            tf.reduce_sum( tf.multiply(tf.div((self.mu2 - self.z_mean),self.var2),
+                      (self.mu2 - self.z_mean)),1) - self.h_dim +\
+                               tf.reduce_sum(tf.log(self.var2),1)  - tf.reduce_sum(self.z_log_sigma_sq  ,1) )
 
         self.cost = tf.reduce_mean(reconstr_loss) + tf.reduce_mean(latent_loss) # average over batch
 
@@ -130,16 +173,16 @@ class VAE(object):
 
     def partial_fit(self, X):
 
-        opt, cost,emb = self.sess.run((self.optimizer, self.cost,self.network_weights['weights_gener']['h2']),feed_dict={self.x: X,self.keep_prob: .4})
+        opt, cost,emb = self.sess.run((self.optimizer, self.cost,self.network_weights['weights_gener']['h2']),feed_dict={self.x: X,self.keep_prob: .4, self.eps: np.random.random([X.shape[0], self.network_architecture["n_z"]])})
         return cost,emb
 
     def test(self, X):
         """Test the model and return the lowerbound on the log-likelihood.
         """
-        cost = self.sess.run((self.cost),feed_dict={self.x: np.expand_dims(X, axis=0),self.keep_prob: 1.0})
+        cost = self.sess.run((self.cost),feed_dict={self.x: np.expand_dims(X, axis=0),self.keep_prob: 1.0, self.eps: np.random.random([1, self.network_architecture["n_z"]])})
         return cost
     def topic_prop(self, X):
         """heta_ is the topic proportion vector. Apply softmax transformation to it before use.
         """
-        theta_ = self.sess.run((self.z),feed_dict={self.x: np.expand_dims(X, axis=0),self.keep_prob: 1.0})
+        theta_ = self.sess.run((self.z),feed_dict={self.x: np.expand_dims(X, axis=0),self.keep_prob: 1.0, self.eps: np.random.random([1, self.network_architecture["n_z"]])})
         return theta_
