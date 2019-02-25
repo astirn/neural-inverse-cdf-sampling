@@ -247,7 +247,7 @@ if __name__ == '__main__':
         mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max), inn_layers=inn_layers)
 
         # train the model
-        train(mdl, sess, show_plots=True)
+        train(mdl, sess, show_plots=True, save_results=True)
 
     # test loading
     tf.reset_default_graph()
