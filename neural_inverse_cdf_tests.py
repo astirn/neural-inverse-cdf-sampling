@@ -9,8 +9,8 @@ from neural_inverse_cdf_utils import train
 # import utility functions
 from model_lib import kl_dirichlet
 
-
-# set seed
+# set random seeds
+np.random.seed(123)
 tf.set_random_seed(123)
 
 

@@ -232,7 +232,8 @@ class NeuralInverseCDF(object):
 
 if __name__ == '__main__':
 
-    # set seed
+    # set random seeds
+    np.random.seed(123)
     tf.set_random_seed(123)
 
     # set training parameters
