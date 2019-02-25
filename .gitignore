@@ -9,3 +9,16 @@ venv/
 
 # ignore numPy files
 *.npy
+
+# ignore ODS lock files
+*.~lock.*
+
+# ignore tex files
+*.log
+*.synctex.gz
+*.aux
+*.out
+*.bak
+*.bbl
+*.blg
+*.dvi
