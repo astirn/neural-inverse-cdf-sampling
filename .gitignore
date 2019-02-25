@@ -6,3 +6,6 @@ __pycache__
 
 # ignore virtual environment
 venv/
+
+# ignore numPy files
+*.npy
