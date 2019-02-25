@@ -27,16 +27,21 @@
 \usetikzlibrary{bayesnet}
 \usepackage{booktabs}
 \usepackage{makecell}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{float}
+\usepackage{caption}
+\captionsetup[figure]{labelformat=empty}
 
 % my commands
 \newcommand{\argmax}[1]{\underset{#1}{\text{arg max }}}
 \newcommand{\Bin}[1]{\text{Binomial}(#1)}
-\newcommand{\Bern}[1]{\text{Bernoulli}(#1)}
 \newcommand{\Bet}[1]{\text{Beta}(#1)}
 \newcommand{\Cat}[1]{\text{Categorical}(#1)}
 \newcommand{\const}{\text{ const }}
 \newcommand{\Dir}[1]{\text{Dirichlet}(#1)}
 \newcommand{\E}[1]{\underset{#1}{\mathbb{E}}}
+\newcommand{\Gam}[1]{\text{Gamma}(#1)}
 \newcommand{\iid}{\overset{iid}{\sim}}
 \newcommand{\ictr}{\mathbf{1}}
 \newcommand{\maximum}[1]{\underset{#1}{\text{max }}}
@@ -181,35 +186,86 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \headerbox{Our Contributions}{name=contributions,column=0,row=0,below=inv_cdf}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    We leverage invertible neural network (INN) blocks \cite{ref:inn} to approximate continuous univariate CDF's, allowing for inverse CDF sampling while ensuring the existence of $\frac{\partial z}{\partial \theta}$. Because the INN blocks are analytically invertible, our approximation maintains \emph{monotonicity} and \emph{one-to-oneness} thus ensuring: $z = F^{-1}(F(z;\theta);\theta)$. 
+    We leverage invertible neural network (INN) layers \cite{ref:inn} to approximate continuous univariate CDF's, allowing for inverse CDF sampling while ensuring the existence of $\frac{\partial z}{\partial \theta}$. Because the INN blocks are analytically invertible, our approximation maintains \emph{monotonicity} and \emph{one-to-oneness} ensuring: $z = \hat{F}^{-1}(\hat{F}(z;\theta);\theta)$. 
   }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Invertible Neural Network}{name=inn,column=1, span=2}{
+  \headerbox{Invertible Neural Network: Affine Coupling Layer}{name=inn,column=1, span=2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	Affine coupling layer \cite{ref:inn}
-	\begin{center}	
-	\includegraphics[width=\columnwidth]{images/inn_forward.png}
-	\\
-	\includegraphics[width=\columnwidth]{images/inn_backward.png}
-	\end{center}
+	\begin{multicols}{2}
+	\begin{figure}[H]
+		\caption{\textbf{Forward Operation} \cite{ref:inn_fig}}
+		\vspace{-10pt}
+		\includegraphics[width=\columnwidth]{images/inn_forward.png}
+	\end{figure}
+	\vspace{-30pt}
+	\small
+	\begin{equation*}
+	\begin{aligned}
+		\text{Bifurcate Input} &= [\bm{u_1}, \bm{u_2}]\\
+		\bm{v_1} = \bm{u_1} \odot &\exp(s_2(\bm{u_2})) + t_2(\bm{u_2})\\
+		\bm{v_2} = \bm{u_2} \odot &\exp(s_1(\bm{v_1})) + t_1(\bm{v_1})\\
+		 \text{Recombine Output} &= [\bm{v_1}, \bm{v_2}]\\
+	\end{aligned}
+	\end{equation*}
+	\begin{figure}[H]
+		\caption{\textbf{Inverse Operation} \cite{ref:inn_fig}}
+		\vspace{-10pt}
+		\includegraphics[width=\columnwidth]{images/inn_backward.png}
+	\end{figure}
+	\vspace{-30pt}
+	\small
+	\begin{equation*}
+	\begin{aligned}
+		\text{Bifurcate Output} &= [\bm{v_1}, \bm{v_2}]\\
+		\bm{u_2} = (\bm{v_2} - t_1(\bm{v_1})) \odot &\exp(-s_1(\bm{v_1}))\\
+		\bm{u_1} = (\bm{v_1} - t_2(\bm{u_2})) \odot &\exp(-s_2(\bm{u_2}))\\
+		\text{Recombine Input} &= [\bm{u_1}, \bm{u_2}]\\
+	\end{aligned}
+	\end{equation*}
+	\end{multicols}
+	\vspace{-10pt}
+	\noindent The main requirement of this layer is that $\dim(\bm{u_i}) = \dim(\bm{v_i})$, such that, when cascading these layers, dimensions must be fixed and identical across layers. The main benefit of this layer is that invertibility is maintained even when $s_i$ and $t_i$ are non-invertible functions (i.e. affine + ReLU).
   }
-  
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{CDF Approximation for Gamma Distribution}{name=gamma_results,column=1, span=2, below=inn}{
+  \headerbox{INN Modifications}{name=mods,column=1, below=inn}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-	\centering
-	\includegraphics[width=\columnwidth]{images/nicdf_Gamma.png}
+\noindent Replacing $\exp(\cdot)$ with $b^{(\cdot)}$, improves numerical stability ($b < e$) and maintains invertibility. Let $f_i(x) = \text{elu}(W_{f_i} \cdot x + b_{f_i})$, where $f \in \{s,t\}$, and $W_{f_i}$ and $b_{f_i}$
+are the outputs of multi-layer perceptrons operating on the distribution parameters $\theta$. Let loss be $|F(z_i; \ \theta_n) - \hat{F}(z_i; \ \theta_n)|$.}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Gamma CDF Training Batch}{name=training,column=2, below=inn, bottomaligned=mods}{
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\footnotesize
+\begin{algorithmic}
+	\STATE Initialize batch $\mathcal{B} = \{\emptyset\}$
+	\FOR{$n \in \{1, \hdots, N_{\text{batch}}\}$}
+		\STATE Sample: $\theta_n \iid p(\theta)$
+		\FOR{$i \in \{1, \hdots, N_{\text{z}}\}$}
+			\STATE Sample: $z_i \iid \Gam{\theta_n, 1}$
+			\STATE Append: $\mathcal{B} := \mathcal{B} \cup {(z_i, \theta_n, F(z_i; \ \theta_n))}$
+		\ENDFOR
+	\ENDFOR
+\end{algorithmic}
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{Gradient Reparameterization}{name=algorithms,column=3,row=0}{
+  \headerbox{CDF Approximation for Gamma($\bm{\theta}$,1) Distribution: $\bm{\theta \in (0, 15]}$ }{name=gamma_results,column=1, span=2, below=mods, bottomaligned=contributions}{
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\begin{center}
+		\includegraphics[width=0.86\columnwidth]{images/nicdf_Gamma.png}
+	\end{center}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\headerbox{Gradient Reparameterization}{name=gradient,column=3, bottomaligned=mods}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\centering
 	\includegraphics[width=\columnwidth]{images/gradientVariance.png}
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{Results}{name=lda,column=3,below=algorithms}{
+\headerbox{Results}{name=lda,column=3,below=gradient}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \begin{tabular}{ccc}
     \multicolumn{3}{c}{Perplexity Scores}\\
@@ -224,13 +280,13 @@
   }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{References \& Code}{name=references,column=3,span=1,below=lda}{
+  \headerbox{References \& Code}{name=references,column=3,span=1,below=lda, bottomaligned=contributions}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \smaller
     \renewcommand{\section}[2]{\vskip 0.05em}
-    \bibliographystyle{plain}
+    \bibliographystyle{IEEEtran}
     {\tiny \bibliography{references}}
-    Source code available at:\\
+    \noindent Source code available at:
     \url{github.com/astirn/neural-inverse-cdf-sampling}
   }
   
