@@ -349,7 +349,7 @@ def result_plot(mdl, sess, fig_results=None, ax_results=None):
         sp.cla()
         sp.set_title('$\\theta$ = {:.2f}'.format(theta[0]))
         sp.plot(z, u, '--', label='$F(z;\\theta)$', linewidth=2)
-        sp.plot(z_hat, u_hat, ':', label='$F\'(z;\\theta)$', linewidth=2)
+        sp.plot(z_hat, u_hat, ':', label='$\\hat{F}(z;\\theta)$', linewidth=2)
         if np.mod(i, int(num_plots / 2)) == 0:
             sp.set_ylabel('CDF')
         sp.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
