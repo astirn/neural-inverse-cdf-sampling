@@ -11,7 +11,7 @@ from model_lib import kl_dirichlet
 
 
 # set seed
-tf.set_random_seed(0)
+tf.set_random_seed(123)
 
 
 def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials):

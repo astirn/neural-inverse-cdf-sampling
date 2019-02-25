@@ -230,7 +230,7 @@ class InvertibleNeuralNetworkLayer(object):
         return u
 
 
-def train(mdl, sess, show_plots=False):
+def train(mdl, sess, show_plots=False, save_results=False):
 
     # get losses
     loss_op, u_loss_op, z_loss_op = mdl.loss()
@@ -243,10 +243,13 @@ def train(mdl, sess, show_plots=False):
                                                optimizer=mdl.optimizer,
                                                summaries=['loss', 'gradients'])
 
-    # tensorFlow saver
-    tf_saver = tf.train.Saver()
-    tf_summary = tf.summary.FileWriter(logdir=mdl.target.log_dir)
-    tf_summary.add_graph(tf.get_default_graph())
+    # configure tensorFlow savers
+    if save_results:
+        tf_saver = tf.train.Saver()
+        tf_summary = tf.summary.FileWriter(logdir=mdl.target.log_dir)
+        tf_summary.add_graph(tf.get_default_graph())
+    else:
+        tf_saver = None
 
     # run initialization
     sess.run(tf.global_variables_initializer())
@@ -308,7 +311,7 @@ def train(mdl, sess, show_plots=False):
         t += 1
 
     # save the model if it has a specified save directory
-    if mdl.target.mdl_dir is not None:
+    if tf_saver is not None:
         tf_saver.save(sess, mdl.target.mdl_dir)
 
 
