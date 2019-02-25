@@ -40,6 +40,7 @@
 \newcommand{\iid}{\overset{iid}{\sim}}
 \newcommand{\ictr}{\mathbf{1}}
 \newcommand{\maximum}[1]{\underset{#1}{\text{max }}}
+\newcommand{\Uni}[1]{\text{Uniform}(#1)}
 
 \newcommand{\SET}[1]  {\ensuremath{\mathcal{#1}}}
 \newcommand{\MAT}[1]  {\ensuremath{\boldsymbol{#1}}}
@@ -160,19 +161,30 @@
       \tikz{\useasboundingbox (-0.2em,-0.32em) rectangle(0.2em,0.32em); \draw[draw=black,fill=lightblue,line width=0.03em] (0,0) circle(0.18em);}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Problem}{name=problem,column=0,row=0}{
+  \headerbox{The Problem}{name=problem,column=0,row=0}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    Thompson sampling (TS), a strategy to balance \textit{exploration} and \textit{exploitation} in multi-armed bandit problems, enjoys theoretical guarantees and strong empirical performance in a variety of domains. However, TS assumes causal relationships between selected actions and received rewards.
+	Variational Bayesian inference frequently relies on Monte Carlo (MC) integration when intractable expectations appear in the evidence lower bound (ELBO). Variational inference evaluates these expectations wrt the proposed posterior approximations. In many cases, such as in Variational Auto-Encoders, we maximize the ELBO via gradient methods, however, to do so in conjunction MC integration requires that samples from the posterior approximations are differentiable wrt their respective parameters. Closed-form ``reparameterization tricks'' unfortunately only exist for a subset of distribution families (e.g. Gaussian).
  }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Contributions}{name=contribution,column=0,row=0,below=problem}{
+  \headerbox{Inverse CDF Sampling}{name=inv_cdf,column=0,row=0,below=problem}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    This article relaxes those assumptions by considering the \textit{noncompliance} setting where a chosen action is not necessarily the implemented action. We formalize TS for both \textit{observed noncompliance} and \textit{latent noncompliance}. Further, we empirically demonstrate the performance benefit of our approach for a variety of environments with differing levels of stochastic noncompliance.
+    For continuous univariate distribution, inverse CDF sampling allows us to reparameterize a sample from a Uniform distribution to the target distribution:
+	\begin{equation*}
+	\begin{aligned}
+		\epsilon &\sim \Uni{0,1}\\
+		z &= F^{-1}(\epsilon; \ \theta) 
+	\end{aligned}
+	\end{equation*}	 
+	Unfortunately, not all continuous univariate distributions have a closed form quantile function, $F^{-1}$. In these cases, $\frac{\partial z}{\partial \theta}$ does not exist, prohibiting gradient methods.
   }
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{Invertible Neural Network}{name=inn,column=0,below=contribution}{
+  \headerbox{Our Contributions}{name=contributions,column=0,row=0,below=inv_cdf}{
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    We leverage invertible neural network (INN) blocks \cite{ref:inn} to approximate continuous univariate CDF's, allowing for inverse CDF sampling while ensuring the existence of $\frac{\partial z}{\partial \theta}$. Because the INN blocks are analytically invertible, our approximation maintains \emph{monotonicity} and \emph{one-to-oneness} thus ensuring: $z = F^{-1}(F(z;\theta);\theta)$. 
+  }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  \headerbox{Invertible Neural Network}{name=inn,column=1, span=2}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	Affine coupling layer \cite{ref:inn}
 	\begin{center}	
@@ -183,14 +195,14 @@
   }
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  \headerbox{CDF Approximation for Gamma Distribution}{name=gamma_results,column=1, span=2}{
+  \headerbox{CDF Approximation for Gamma Distribution}{name=gamma_results,column=1, span=2, below=inn}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\centering
 	\includegraphics[width=\columnwidth]{images/nicdf_Gamma.png}
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{Reparameterize }{name=algorithms,column=3,row=0}{
+\headerbox{Gradient Reparameterization}{name=algorithms,column=3,row=0}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	\centering
 	\includegraphics[width=\columnwidth]{images/gradientVariance.png}
@@ -206,7 +218,7 @@
     \midrule
     NVLDA		& 1099.96		& 1103.77\\
     \midrule
-    ProDLDA		& 1161.66		& ???\\
+    ProDLDA		& 1161.69		& 1099.94\\
     \midrule
   \end{tabular}
   }
