@@ -186,7 +186,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \headerbox{Our Contributions}{name=contributions,column=0,row=0,below=inv_cdf}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    We leverage invertible neural network (INN) layers \cite{ref:inn} to approximate continuous univariate CDF's, allowing for inverse CDF sampling while ensuring the existence of $\frac{\partial z}{\partial \theta}$. Because the INN blocks are analytically invertible, our approximation maintains \emph{monotonicity} and \emph{one-to-oneness} ensuring: $z = \hat{F}^{-1}(\hat{F}(z;\theta);\theta)$. 
+    We leverage invertible neural network (INN) layers \cite{ref:inn, ref:inverse_problems} to approximate continuous univariate CDF's, allowing for inverse CDF sampling while ensuring the existence of $\frac{\partial z}{\partial \theta}$. Because the INN blocks are analytically invertible, our approximation maintains \emph{monotonicity} and \emph{one-to-oneness} ensuring: $z = \hat{F}^{-1}(\hat{F}(z;\theta);\theta)$. 
   }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   \headerbox{Invertible Neural Network: Affine Coupling Layer}{name=inn,column=1, span=2}{
@@ -258,8 +258,10 @@ are the outputs of multi-layer perceptrons operating on the distribution paramet
 }
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\headerbox{Gradient Reparameterization}{name=gradient,column=3, bottomaligned=mods}{
+\headerbox{Dirichlet Approximation}{name=gradient,column=3}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\cite{ref:grad_reparam} \cite{ref:grad_reparam_code}
+	\\
 	\centering
 	\includegraphics[width=\columnwidth]{images/gradientVariance.png}
 }
@@ -267,6 +269,8 @@ are the outputs of multi-layer perceptrons operating on the distribution paramet
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \headerbox{Results}{name=lda,column=3,below=gradient}{
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\cite{ref:neural_lda} \cite{ref:neural_lda_code}
+	\\
   \begin{tabular}{ccc}
     \multicolumn{3}{c}{Perplexity Scores}\\
     \toprule
