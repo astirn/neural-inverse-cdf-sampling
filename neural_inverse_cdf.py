@@ -85,7 +85,7 @@ class NeuralInverseCDF(object):
     Neural CDF Forward: F(z; theta) --> u
     Neural CDF Reverse: F_inv(u; theta) --> z
     """
-    def __init__(self, target, inn_layers, fwd_direction='cdf', trainable=True):
+    def __init__(self, target, fwd_direction='cdf', trainable=True):
 
         # save target object
         self.target = target
@@ -96,7 +96,7 @@ class NeuralInverseCDF(object):
 
         # configure dimensions
         self.inn_dim = 2
-        self.inn_layers = inn_layers
+        self.inn_layers = 8
 
         # declare the Invertible Neural Network Blocks
         self.inn = []
@@ -237,7 +237,6 @@ if __name__ == '__main__':
     tf.set_random_seed(123)
 
     # set training parameters
-    inn_layers = 8
     theta_max = 15
 
     # begin test session
@@ -245,7 +244,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
 
         # declare model
-        mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max), inn_layers=inn_layers)
+        mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max))
 
         # train the model
         train(mdl, sess, show_plots=True, save_results=True)
@@ -255,7 +254,7 @@ if __name__ == '__main__':
     with tf.Session() as sess:
 
         # declare model
-        mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max), inn_layers=inn_layers, trainable=False)
+        mdl = NeuralInverseCDF(target=GammaCDF(theta_max=theta_max), trainable=False)
         _ = mdl.loss()
 
         # restore variables (order of operations matter)

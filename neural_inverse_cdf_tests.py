@@ -5,7 +5,6 @@ from matplotlib import pyplot as plt
 
 # import neural reparameterization functions
 from neural_inverse_cdf import NeuralInverseCDF, GammaCDF
-from neural_inverse_cdf_utils import train
 
 # import utility functions
 from model_lib import kl_dirichlet
@@ -15,7 +14,7 @@ np.random.seed(123)
 tf.set_random_seed(123)
 
 
-def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials, base_dir=os.getcwd()):
+def gamma_variance_test(x, alphas, alpha_prior, N_trials, base_dir=os.getcwd()):
 
     # get useful numbers
     K = x.shape[0]
@@ -38,7 +37,7 @@ def gamma_variance_test(x, alphas, alpha_prior, inn_layers, N_trials, base_dir=o
         epsilon_ph = tf.placeholder(tf.float32, [1, K])
 
         # declare Gamma sampler
-        sampler = NeuralInverseCDF(target=GammaCDF(base_dir=base_dir), inn_layers=inn_layers, trainable=False)
+        sampler = NeuralInverseCDF(target=GammaCDF(base_dir=base_dir), trainable=False)
 
         # clamp alpha to supported value
         alpha_ph = tf.minimum(alpha_ph, sampler.target.theta_max)
@@ -101,7 +100,7 @@ if __name__ == '__main__':
     p_true = np.random.dirichlet(np.ones(K))
     x = np.random.multinomial(n=N, pvals=p_true)
     alphas = np.linspace(1.01, 3.0, 100)
-    grads = gamma_variance_test(x=x, alphas=alphas, alpha_prior=np.ones(K), inn_layers=8, N_trials=100)
+    grads = gamma_variance_test(x=x, alphas=alphas, alpha_prior=np.ones(K), N_trials=100)
 
     # take the variance across samples
     grad_var = np.var(grads, axis=1)
