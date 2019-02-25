@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/andrew/PycharmProjects/neural-inverse-cdf-sampling/InverseCDF/Gamma/checkpoint/gamma"
+all_model_checkpoint_paths: "/home/andrew/PycharmProjects/neural-inverse-cdf-sampling/InverseCDF/Gamma/checkpoint/gamma"
