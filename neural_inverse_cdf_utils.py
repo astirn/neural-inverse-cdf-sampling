@@ -27,7 +27,7 @@ def inn_network_parameters(theta, out_dim, n_layers, name, trainable=True):
                             units=30,
                             activation=tf.nn.elu,
                             use_bias=True,
-                            kernel_initializer=tf.random_uniform_initializer(minval=-0.1, maxval=0.1, dtype=tf.float32),
+                            kernel_initializer=tf.random_uniform_initializer(minval=-0.05, maxval=0.05, dtype=tf.float32),
                             bias_initializer=tf.constant_initializer(0.0),
                             trainable=trainable,
                             reuse=tf.AUTO_REUSE,
@@ -251,7 +251,7 @@ def train(mdl, sess, plot_dir=None):
     sess.run(tf.global_variables_initializer())
 
     # figure init
-    fig = plt.figure(figsize=(16, 9))
+    fig_loss, ax_loss = plt.subplots(1, 1)
     if plot_dir is not None:
         plt.ion()
 
@@ -281,25 +281,24 @@ def train(mdl, sess, plot_dir=None):
               'u Loss = {:.5f} | '.format(u_loss[t]) +
               'z Loss = {:.5f}'.format(z_loss[t]), end='')
 
+        # update learning curve
+        ax_loss.cla()
+        ax_loss.set_title('Learning Curve')
+        ax_loss.plot(loss[:t + 1])
+        ax_loss.set_xlabel('Epoch')
+        ax_loss.set_ylabel('Loss')
+
         # plot update
-        if np.mod(t + 1, 1) == 0:
-            fig.clf()
-            mdl.train_plot(fig, loss[:t + 1], sess)
+        if np.mod(t + 1, 50) == 0:
 
-        # draw the plot if not saving
-        if plot_dir is None:
-            plt.pause(0.01)
+            # update results plot
+            mdl.result_plot(sess)
 
-        # otherwise, save the plot
-        else:
-            fig.savefig(os.path.join(plot_dir, 'learning_curve'))
+        # draw the plot
+        plt.pause(0.01)
 
         # increment t
         t += 1
-
-    # close the plot if saving
-    if plot_dir is not None:
-        plt.close(fig)
 
     # save the model if it has a specified save directory
     if mdl.target.mdl_dir is not None:

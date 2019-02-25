@@ -30,8 +30,10 @@ class GammaCDF(object):
     def sample_training_points(self, thetas_per_batch, samples_per_theta):
 
         # sample thetas
-        thetas = np.random.random(thetas_per_batch) * self.theta_max
+        thetas = np.random.random(thetas_per_batch) * 2 * self.theta_max - self.theta_max
+        thetas[thetas < 0] = np.exp(thetas[thetas < 0])
 
+        # loop over theta samples
         z = []
         u = []
         theta = []
@@ -53,10 +55,10 @@ class GammaCDF(object):
 
         return z, u, theta
 
-    def sample_test_points(self, theta_quantile, num_points=100):
+    def sample_test_points(self, theta, num_points=100):
 
         # compute target theta quantile
-        theta = theta_quantile * self.theta_max * np.ones(num_points)
+        theta = theta * np.ones(num_points)
 
         # compute evaluation points
         # z = np.linspace(0, self.z_max, num_points)
@@ -115,8 +117,12 @@ class NeuralInverseCDF(object):
         self.thetas_per_batch = 100
         self.samples_per_theta = 100
         self.learning_rate = 5e-4
-        self.num_epochs = 500
+        self.num_epochs = 1000
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+
+        # configure plotting
+        self.fig_results, self.ax_results = plt.subplots(2, 4, figsize=(16, 9))
+        self.ax_results = np.reshape(self.ax_results, -1)
 
     def _forward_eval(self, x, theta):
 
@@ -189,21 +195,21 @@ class NeuralInverseCDF(object):
 
         return self._load_feed_dict(z, u, theta)
 
-    def train_plot(self, fig, loss, sess):
+    def result_plot(self, sess):
 
-        # loss subplot
-        sp = fig.add_subplot(2, 1, 1)
-        sp.set_title('RMSE Forward Loss')
-        sp.plot(loss)
-        sp.set_xlabel('Epoch')
-        sp.set_ylabel('Loss')
+        # number of plots
+        num_plots = len(self.ax_results)
+
+        # set theta test points
+        thetas = [0.1, 0.5]
 
         # result plots
-        num_plots = 5
+        thetas = thetas + list(np.linspace(1, self.target.theta_max, num_plots - len(thetas)))
+
         for i in range(num_plots):
 
             # get test points
-            z, u, theta = self.target.sample_test_points((i + 0.5) / num_plots)
+            z, u, theta = self.target.sample_test_points(thetas[i])
 
             # load feed dictionary for testing
             feed_dict = self._load_feed_dict(z, u, theta)
@@ -214,12 +220,12 @@ class NeuralInverseCDF(object):
             z_hat = np.mean(z_hat, axis=1)
 
             # add subplot
-            sp = fig.add_subplot(2, num_plots, num_plots + 1 + i)
-            sp.set_title('theta = {:.3f}'.format(theta[0]))
-            sp.plot(z, u, label='F(z;theta)', linewidth=2)
-            sp.plot(z_hat, u_hat, label='F\'(z;theta)', linewidth=2)
-            sp.set_xlabel('z')
-            if i == 0:
+            sp = self.ax_results[i]
+            sp.cla()
+            sp.set_title('$\\theta$ = {:.2f}'.format(theta[0]))
+            sp.plot(z, u, label='$F(z;\\theta)$', linewidth=2)
+            sp.plot(z_hat, u_hat, label='$F\'(z;\\theta)$', linewidth=2)
+            if np.mod(i, int(num_plots / 2)) == 0:
                 sp.set_ylabel('CDF')
             sp.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             sp.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -294,7 +300,7 @@ if __name__ == '__main__':
         mdl.restore(sess)
 
         # test it
-        mdl.train_plot(plt.figure(), np.zeros(1), sess)
+        mdl.result_plot(sess)
 
     # keep plots open
     plt.ioff()
